@@ -17,8 +17,8 @@ function layout(title: string, active: NavItem, body: string): string {
 <header class="nav">
 <a class="nav-title" href="/">sebastinez.dev</a>
 <nav>
-<a href="/links.html"${active === "links" ? ' aria-current="page"' : ""}>[links]</a>
-<a href="/projects.html"${active === "projects" ? ' aria-current="page"' : ""}>[projects]</a>
+<a href="links.html"${active === "links" ? ' aria-current="page"' : ""}>[links]</a>
+<a href="projects.html"${active === "projects" ? ' aria-current="page"' : ""}>[projects]</a>
 </nav>
 </header>
 <main>
@@ -55,9 +55,9 @@ function renderProjectLinks(links: ProjectLink[]): string {
 
 function renderProjectItem(project: Project): string {
   return `<li class="project-entry">
-<h2>${escapeHtml(project.name)} <span class="status status-${
-    escapeHtml(project.status)
-  }">${escapeHtml(project.status)}</span></h2>
+<h2>${escapeHtml(project.name)} <span class="status status-${escapeHtml(
+    project.status,
+  )}">${escapeHtml(project.status)}</span></h2>
 <p>${escapeHtml(project.description)}</p>
 <p class="project-links">${renderProjectLinks(project.links)}</p>
 </li>`;
@@ -65,7 +65,7 @@ function renderProjectItem(project: Project): string {
 
 export function renderProjectsPage(projects: Project[]): string {
   const sorted = [...projects].sort((a, b) =>
-    b.date_added.localeCompare(a.date_added)
+    b.date_added.localeCompare(a.date_added),
   );
   const body = sorted.length
     ? `<ul class="projects">\n${sorted.map(renderProjectItem).join("\n")}\n</ul>`
