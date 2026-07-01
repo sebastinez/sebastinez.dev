@@ -1,12 +1,4 @@
 links:
-  - url: https://docs.jj-vcs.dev/
-    title: Jujutsu docs
-    note: A git-compatible VCS with mutable commits and automatic rebasing.
-    date: 2026-06-28
-  - url: https://deno.com/
-    title: Deno
-    note: Native TypeScript execution, no compile step, no npm install.
-    date: 2026-06-20
 
 projects:
   - name: sebastinez.dev
