@@ -1,0 +1,13 @@
+sebastinez.dev {
+	root * /path/to/sebastinez.dev/dist
+	encode zstd gzip
+	file_server
+
+	# dist/links.xml should serve as RSS, not generic XML/text.
+	@feed path /links.xml
+	header @feed Content-Type "application/rss+xml; charset=utf-8"
+
+	log {
+		output file /var/log/caddy/sebastinez.dev.log
+	}
+}

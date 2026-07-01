@@ -25,16 +25,11 @@ never committed.
 ## Deploy (VPS reference)
 
 The site is served by Caddy pointed at the repo's `dist/` directory, with
-automatic HTTPS. A daily cron job pulls the repo (over a read-only,
-repo-scoped SSH deploy key) and rebuilds:
+automatic HTTPS — see [`Caddyfile`](./Caddyfile) (update the `root` path
+to match the clone location on the VPS). A daily cron job pulls the repo
+(over a read-only, repo-scoped SSH deploy key) and rebuilds:
 
 ```
-Caddyfile:
-  sebastinez.dev {
-    root * /path/to/sebastinez.dev/dist
-    file_server
-  }
-
 crontab:
   0 6 * * * cd /path/to/sebastinez.dev && git pull && deno run --allow-read --allow-write generate.ts >> build.log 2>&1
 ```
