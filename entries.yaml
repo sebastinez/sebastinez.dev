@@ -1,4 +1,8 @@
 links:
+  - url: https://isene.org/2026/05/Audience-of-One.html
+    title: A desktop made for one
+    note: The joy of building tools and low level OS services for the audience of oneself.
+    date: 2026-07-02
 
 projects:
   - name: sebastinez.dev
@@ -8,3 +12,10 @@ projects:
       - label: GitHub
         url: https://github.com/sebastinez/sebastinez.dev
     date_added: 2026-07-01
+  - name: Casa de Cuentos E-Commerce
+    description: Self build and maintained e-commerce with SvelteKit, Pocketbase, Stripe and Resend
+    status: shipped
+    links:
+      - label: Website
+        url: https://casadecuentos.ch
+    date_added: 2026-06-18
