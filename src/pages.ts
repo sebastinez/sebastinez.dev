@@ -55,9 +55,10 @@ function renderProjectLinks(links: ProjectLink[]): string {
 
 function renderProjectItem(project: Project): string {
   return `<li class="project-entry">
-<h2>${escapeHtml(project.name)} <span class="status status-${escapeHtml(
-    project.status,
-  )}">${escapeHtml(project.status)}</span></h2>
+<div class="project-header">
+<h2>${escapeHtml(project.name)}</h2>
+<span class="status status-${escapeHtml(project.status)}">${escapeHtml(project.status)}</span>
+</div>
 <p>${escapeHtml(project.description)}</p>
 <p class="project-links">${renderProjectLinks(project.links)}</p>
 </li>`;
