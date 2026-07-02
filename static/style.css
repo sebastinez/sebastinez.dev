@@ -118,3 +118,9 @@ main {
 .project-links {
   opacity: 0.85;
 }
+
+.project-header {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+}
