@@ -1,5 +1,6 @@
 sebastinez.dev {
 	root * /path/to/sebastinez.dev/dist
+	root /projects/* /path/to/sebastinez.dev/projects
 	encode zstd gzip
 	file_server
 
