@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cover Collage — edge-to-edge packing</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<style>
+  :root{
+    --ink:#15171c;        /* light-table stage */
+    --ink-2:#1c1f26;
+    --paper:#e9ebef;      /* cool control rail, not cream */
+    --paper-2:#f4f5f7;
+    --edge:#cfd3da;
+    --text:#1a1d22;
+    --muted:#6a7078;
+    --cyan:#0891b2;       /* interactive / proof */
+    --cyan-ink:#075e73;
+    --reg:#e5352b;        /* registration marks only */
+    --field:#ffffff;
+    --sans:"Helvetica Neue",Inter,system-ui,-apple-system,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+    --rail:340px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;font-family:var(--sans);color:var(--text);background:var(--paper);
+    display:grid;grid-template-columns:var(--rail) 1fr;height:100vh;overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---- control rail ---- */
+  .rail{
+    background:var(--paper);border-right:1px solid var(--edge);
+    display:flex;flex-direction:column;min-height:0;
+  }
+  .rail header{padding:20px 22px 16px;border-bottom:1px solid var(--edge)}
+  .brand{display:flex;align-items:baseline;gap:9px}
+  .brand h1{
+    font-size:16px;font-weight:650;letter-spacing:-.01em;margin:0;
+  }
+  .brand .tick{
+    font-family:var(--mono);font-size:10px;color:var(--cyan-ink);
+    background:#d7eef3;padding:2px 6px;border-radius:3px;letter-spacing:.02em;
+  }
+  .brand p{margin:6px 0 0;font-size:12px;color:var(--muted);line-height:1.45}
+
+  .rail .scroll{overflow-y:auto;padding:6px 0 24px;flex:1;min-height:0}
+  fieldset{border:0;margin:0;padding:16px 22px;border-bottom:1px solid var(--edge)}
+  legend{
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--muted);padding:0;margin-bottom:12px;
+    display:flex;width:100%;justify-content:space-between;
+  }
+  legend .val{color:var(--cyan-ink);letter-spacing:.02em}
+
+  label.row{display:block;margin:0 0 13px}
+  label.row:last-child{margin-bottom:0}
+  label.row .lab{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-size:12.5px;margin-bottom:6px;
+  }
+  label.row .lab b{font-weight:550}
+  label.row .lab .num{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;width:100%;height:2px;background:var(--edge);
+    border-radius:2px;outline:none;margin:6px 0;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+    background:var(--field);border:2px solid var(--cyan);cursor:pointer;
+    transition:transform .08s;
+  }
+  input[type=range]::-webkit-slider-thumb:active{transform:scale(1.25)}
+  input[type=range]::-moz-range-thumb{
+    width:14px;height:14px;border-radius:50%;background:var(--field);
+    border:2px solid var(--cyan);cursor:pointer;
+  }
+
+  .seg{display:flex;border:1px solid var(--edge);border-radius:7px;overflow:hidden;background:var(--field)}
+  .seg button{
+    flex:1;border:0;background:transparent;padding:7px 4px;font:inherit;font-size:12px;
+    color:var(--muted);cursor:pointer;border-right:1px solid var(--edge);
+  }
+  .seg button:last-child{border-right:0}
+  .seg button[aria-pressed=true]{background:var(--cyan);color:#fff;font-weight:550}
+
+  select,input[type=text]{
+    width:100%;font:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--edge);
+    border-radius:7px;background:var(--field);color:var(--text);
+  }
+  select:focus,input:focus{outline:2px solid var(--cyan);outline-offset:-1px;border-color:var(--cyan)}
+
+  .btn{
+    font:inherit;font-size:13px;font-weight:550;border-radius:8px;cursor:pointer;
+    padding:10px 14px;border:1px solid var(--edge);background:var(--field);color:var(--text);
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;
+    transition:background .12s,border-color .12s;
+  }
+  .btn:hover{border-color:var(--cyan);color:var(--cyan-ink)}
+  .btn.primary{background:var(--cyan);border-color:var(--cyan);color:#fff}
+  .btn.primary:hover{background:var(--cyan-ink);border-color:var(--cyan-ink);color:#fff}
+  .btn.ghost{border-style:dashed}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn .k{font-family:var(--mono);font-size:11px;opacity:.7}
+
+  .split{display:flex;gap:8px}
+  .toggle{display:flex;align-items:center;gap:9px;font-size:12.5px;cursor:pointer}
+  .toggle input{position:absolute;opacity:0;width:0;height:0}
+  .toggle .track{width:34px;height:19px;border-radius:20px;background:var(--edge);position:relative;transition:background .15s;flex:none}
+  .toggle .track::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+  .toggle input:checked + .track{background:var(--cyan)}
+  .toggle input:checked + .track::after{transform:translateX(15px)}
+
+  /* ---- stage ---- */
+  .stage{
+    background:
+      radial-gradient(120% 100% at 50% 0%,var(--ink-2),var(--ink));
+    position:relative;display:flex;flex-direction:column;min-width:0;
+  }
+  .stage .bar{
+    height:52px;flex:none;display:flex;align-items:center;gap:16px;padding:0 22px;
+    color:#c7ccd4;border-bottom:1px solid #000;
+    font-family:var(--mono);font-size:11.5px;letter-spacing:.02em;
+  }
+  .stage .bar .dot{width:7px;height:7px;border-radius:50%;background:#3a3f48}
+  .stage .bar .dot.live{background:var(--cyan);box-shadow:0 0 0 3px rgba(8,145,178,.25)}
+  .stage .bar .sp{flex:1}
+  .stage .bar b{color:#eef1f5;font-weight:600}
+
+  .viewport{flex:1;position:relative;display:grid;place-items:center;padding:34px;min-height:0}
+  .paperwrap{position:relative;filter:drop-shadow(0 18px 40px rgba(0,0,0,.55))}
+  canvas#preview{display:block;background:#fff;max-width:100%;max-height:100%}
+  /* registration marks — the signature; semantic proof layer */
+  .reg{position:absolute;pointer-events:none}
+  .reg svg{display:block}
+  .reg.tl{top:-13px;left:-13px}.reg.tr{top:-13px;right:-13px}
+  .reg.bl{bottom:-13px;left:-13px}.reg.br{bottom:-13px;right:-13px}
+
+  .empty{
+    text-align:center;color:#7b828d;font-size:13px;max-width:280px;line-height:1.55;
+  }
+  .empty svg{margin-bottom:14px}
+  .empty b{color:#c7ccd4;font-weight:600}
+
+  .filmstrip{
+    flex:none;height:74px;display:flex;gap:6px;padding:10px 22px;overflow-x:auto;
+    border-top:1px solid #000;background:rgba(0,0,0,.25);
+  }
+  .filmstrip:empty{display:none}
+  .filmstrip .thumb{height:54px;border-radius:3px;flex:none;background:#000;
+    outline:1px solid #33383f;object-fit:cover}
+  .filmstrip .count{color:#7b828d;font-family:var(--mono);font-size:11px;align-self:center;flex:none;padding-right:6px}
+
+  .toast{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(12px);
+    background:#0d0f13;color:#eef1f5;border:1px solid #2a2e35;border-radius:9px;
+    padding:11px 16px;font-size:12.5px;opacity:0;transition:.2s;pointer-events:none;
+    display:flex;align-items:center;gap:9px;font-family:var(--mono);z-index:20;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast .d{width:6px;height:6px;border-radius:50%;background:var(--cyan)}
+  .toast.warn .d{background:var(--reg)}
+
+  @media (max-width:820px){
+    body{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+    .rail{border-right:0;border-bottom:1px solid var(--edge);max-height:46vh}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<aside class="rail">
+  <header>
+    <div class="brand">
+      <h1>Cover Collage</h1><span class="tick">no gaps</span>
+    </div>
+    <p>Pack a folder of images edge-to-edge onto one page. Tiles keep their own proportions; each is cropped just enough to fill.</p>
+  </header>
+
+  <div class="scroll">
+    <fieldset>
+      <legend>Source</legend>
+      <button class="btn ghost" id="pick" style="margin-bottom:8px">Choose image folder…</button>
+      <div class="split">
+        <button class="btn" id="pickFiles" style="font-size:12px">Pick files</button>
+        <button class="btn" id="clear" style="font-size:12px">Clear</button>
+      </div>
+      <input type="file" id="fileInput" accept="image/*" multiple webkitdirectory hidden>
+      <input type="file" id="fileInput2" accept="image/*" multiple hidden>
+    </fieldset>
+
+    <fieldset>
+      <legend>Page</legend>
+      <label class="row">
+        <span class="lab"><b>Size</b></span>
+        <select id="size">
+          <option value="a2">A2 — 420 × 594 mm</option>
+          <option value="a3" selected>A3 — 297 × 420 mm</option>
+          <option value="a4">A4 — 210 × 297 mm</option>
+          <option value="a5">A5 — 148 × 210 mm</option>
+          <option value="letter">Letter — 8.5 × 11 in</option>
+          <option value="tabloid">Tabloid — 11 × 17 in</option>
+          <option value="square">Square — 300 × 300 mm</option>
+        </select>
+      </label>
+      <label class="row">
+        <span class="lab"><b>Orientation</b></span>
+        <div class="seg" id="orient">
+          <button data-v="portrait" aria-pressed="true">Portrait</button>
+          <button data-v="landscape" aria-pressed="false">Landscape</button>
+        </div>
+      </label>
+      <label class="row">
+        <span class="lab"><b>Resolution</b><span class="num" id="dpiOut">300 dpi</span></span>
+        <input type="range" id="dpi" min="72" max="600" step="1" value="300">
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Layout <span class="val" id="scoreOut">—</span></legend>
+      <label class="row">
+        <span class="lab"><b>Seed</b><span class="num" id="seedOut">#0</span></span>
+        <input type="range" id="seed" min="0" max="4000" step="1" value="0">
+      </label>
+      <div class="split" style="margin-bottom:13px">
+        <button class="btn" id="reroll" style="font-size:12px">Reroll</button>
+        <button class="btn" id="best" style="font-size:12px">Find best fit</button>
+      </div>
+      <label class="row">
+        <span class="lab"><b>Smallest tile</b><span class="num" id="minOut">30 mm</span></span>
+        <input type="range" id="minTile" min="10" max="90" step="1" value="30">
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Trim borders</legend>
+      <label class="toggle" style="margin-bottom:12px">
+        <input type="checkbox" id="trim" checked><span class="track"></span>
+        <span>Strip solid edges &amp; padding</span>
+      </label>
+      <label class="row">
+        <span class="lab"><b>Tolerance</b><span class="num" id="tolOut">8</span></span>
+        <input type="range" id="tol" min="0" max="30" step="1" value="8">
+      </label>
+    </fieldset>
+
+    <fieldset style="border-bottom:0">
+      <legend>Output</legend>
+      <label class="row">
+        <span class="lab"><b>Format</b></span>
+        <div class="seg" id="fmt">
+          <button data-v="pdf" aria-pressed="true">PDF</button>
+          <button data-v="png" aria-pressed="false">PNG</button>
+        </div>
+      </label>
+      <label class="row">
+        <span class="lab"><b>File name</b></span>
+        <input type="text" id="fname" value="collage-a3.pdf" spellcheck="false">
+      </label>
+      <button class="btn primary" id="export" disabled>Save to folder</button>
+      <p style="font-size:11px;color:var(--muted);margin:9px 0 0;line-height:1.5" id="saveNote">
+        Pick a folder to write back into it; otherwise this downloads.
+      </p>
+    </fieldset>
+  </div>
+</aside>
+
+<main class="stage">
+  <div class="bar">
+    <span class="dot" id="statusDot"></span>
+    <span id="status">No images loaded</span>
+    <span class="sp"></span>
+    <span id="dims">—</span>
+  </div>
+
+  <div class="viewport">
+    <div class="paperwrap" id="paperwrap" hidden>
+      <canvas id="preview" width="10" height="10"></canvas>
+      <div class="reg tl"></div><div class="reg tr"></div>
+      <div class="reg bl"></div><div class="reg br"></div>
+    </div>
+    <div class="empty" id="empty">
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="#5a616b" stroke-width="1.5">
+        <rect x="7" y="7" width="15" height="15" rx="1"/><rect x="26" y="7" width="15" height="20" rx="1"/>
+        <rect x="7" y="26" width="15" height="15" rx="1"/><rect x="26" y="31" width="15" height="10" rx="1"/>
+      </svg>
+      <div><b>Choose an image folder to begin.</b><br>
+      Book covers, photos, anything. They'll pack onto the page with no gutters.</div>
+    </div>
+  </div>
+
+  <div class="filmstrip" id="filmstrip"></div>
+</main>
+
+<div class="toast" id="toast"><span class="d"></span><span id="toastMsg"></span></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const PAGES={a2:[420,594],a3:[297,420],a4:[210,297],a5:[148,210],letter:[215.9,279.4],tabloid:[279.4,431.8],square:[300,300]};
+const MAX_CANVAS_AREA=268435456; // ~16384², conservative guard
+
+let images=[];        // {name, bitmap, nw, nh, trim:{x,y,w,h}}
+let dirHandle=null;   // FileSystemDirectoryHandle when available
+let layout=null;      // {rects, assign, W, H, seed, score}
+let state={orient:'portrait',fmt:'pdf'};
+
+/* ---------- RNG + packing (verified headless) ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const randint=(rng,lo,hi)=>lo+Math.floor(rng()*(hi-lo+1));
+function partition(rect,n,rng,jit=0.18,mr=0.25){
+  const [x,y,w,h]=rect;
+  if(n===1)return[rect];
+  const a=randint(rng,1,n-1), b=n-a;
+  let f=(a/n)*(1-jit+rng()*2*jit); f=Math.min(Math.max(f,mr),1-mr);
+  if(w>=h){const c=Math.round(w*f);
+    return partition([x,y,c,h],a,rng,jit,mr).concat(partition([x+c,y,w-c,h],b,rng,jit,mr));}
+  const c=Math.round(h*f);
+  return partition([x,y,w,c],a,rng,jit,mr).concat(partition([x,y+c,w,h-c],b,rng,jit,mr));
+}
+function assignByAspect(rects,asp){
+  const or=[...rects.keys()].sort((i,j)=>rects[i][2]/rects[i][3]-rects[j][2]/rects[j][3]);
+  const oi=[...asp.keys()].sort((i,j)=>asp[i]-asp[j]);
+  const out=new Array(rects.length);
+  or.forEach((r,k)=>out[r]=oi[k]); return out;
+}
+function scoreLayout(rects,assign,asp,minSide){
+  let s=0;
+  rects.forEach((r,k)=>{const i=assign[k];
+    s+=Math.abs(Math.log((r[2]/r[3])/asp[i]));
+    if(Math.min(r[2],r[3])<minSide)s+=3;});
+  return s;
+}
+function buildLayout(seed){
+  if(!images.length)return null;
+  const [mmW,mmH]=pageMM();
+  const dpi=+$('#dpi').value;
+  const W=Math.round(mmW/25.4*dpi), H=Math.round(mmH/25.4*dpi);
+  const minSide=(+$('#minTile').value)/25.4*dpi;
+  const asp=images.map(im=>im.trim.w/im.trim.h);
+  const rng=mulberry32(seed+1);
+  const rects=partition([0,0,W,H],images.length,rng);
+  const assign=assignByAspect(rects,asp);
+  const score=scoreLayout(rects,assign,asp,minSide);
+  return {rects,assign,W,H,seed,score};
+}
+function findBest(tries=4000){
+  const [mmW,mmH]=pageMM();
+  const dpi=+$('#dpi').value;
+  const W=Math.round(mmW/25.4*dpi), H=Math.round(mmH/25.4*dpi);
+  const minSide=(+$('#minTile').value)/25.4*dpi;
+  const asp=images.map(im=>im.trim.w/im.trim.h);
+  let best=null;
+  for(let s=0;s<tries;s++){
+    const rng=mulberry32(s+1);
+    const rects=partition([0,0,W,H],images.length,rng);
+    const assign=assignByAspect(rects,asp);
+    const score=scoreLayout(rects,assign,asp,minSide);
+    if(!best||score<best.score)best={rects,assign,W,H,seed:s,score};
+  }
+  return best;
+}
+
+/* ---------- trim ---------- */
+const _an=document.createElement('canvas'); const _ac=_an.getContext('2d',{willReadFrequently:true});
+function computeTrim(bitmap,tol){
+  if(tol<=0)return {x:0,y:0,w:bitmap.width,h:bitmap.height};
+  const scale=Math.min(1,600/Math.max(bitmap.width,bitmap.height));
+  const w=Math.max(1,Math.round(bitmap.width*scale)), h=Math.max(1,Math.round(bitmap.height*scale));
+  _an.width=w; _an.height=h; _ac.drawImage(bitmap,0,0,w,h);
+  const d=_ac.getImageData(0,0,w,h).data;
+  let l=0,t=0,r=w-1,b=h-1;
+  const lineStd=(fixed,along,horizontal)=>{ // std of channels across a row/col span
+    let n=0,s0=0,s1=0,s2=0,q0=0,q1=0,q2=0;
+    for(let a=along[0];a<=along[1];a++){
+      const idx=horizontal?((fixed*w+a)*4):((a*w+fixed)*4);
+      const R=d[idx],G=d[idx+1],B=d[idx+2];
+      s0+=R;s1+=G;s2+=B;q0+=R*R;q1+=G*G;q2+=B*B;n++;
+    }
+    const v0=q0/n-(s0/n)**2,v1=q1/n-(s1/n)**2,v2=q2/n-(s2/n)**2;
+    return Math.sqrt(Math.max(0,Math.max(v0,v1,v2)));
+  };
+  for(let pass=0;pass<3;pass++){
+    const b0=[l,t,r,b];
+    while(t<b && lineStd(t,[l,r],true)<tol)t++;
+    while(b>t && lineStd(b,[l,r],true)<tol)b--;
+    while(l<r && lineStd(l,[t,b],false)<tol)l++;
+    while(r>l && lineStd(r,[t,b],false)<tol)r--;
+    if(b0[0]===l&&b0[1]===t&&b0[2]===r&&b0[3]===b)break;
+  }
+  return {x:l/scale,y:t/scale,w:(r-l+1)/scale,h:(b-t+1)/scale};
+}
+function retrimAll(){
+  const tol=$('#trim').checked?+$('#tol').value:0;
+  for(const im of images)im.trim=computeTrim(im.bitmap,tol);
+}
+
+/* ---------- draw ---------- */
+function coverRect(trim,dw,dh){
+  const a=dw/dh; let {x,y,w,h}=trim, sw,sh,sx,sy;
+  if(w/h>a){sh=h;sw=h*a;sx=x+(w-sw)/2;sy=y;}
+  else{sw=w;sh=w/a;sx=x;sy=y+(h-sh)/2;}
+  return [sx,sy,sw,sh];
+}
+function renderTo(ctx,scale){
+  const {rects,assign,W,H}=layout;
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,W*scale,H*scale);
+  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+  rects.forEach((r,k)=>{
+    const im=images[assign[k]];
+    const [sx,sy,sw,sh]=coverRect(im.trim,r[2],r[3]);
+    ctx.drawImage(im.bitmap,sx,sy,sw,sh, r[0]*scale,r[1]*scale,r[2]*scale,r[3]*scale);
+  });
+}
+function drawPreview(){
+  if(!layout)return;
+  const {W,H}=layout;
+  const vp=$('.viewport').getBoundingClientRect();
+  const maxW=Math.min(vp.width-80,760), maxH=vp.height-80;
+  const scale=Math.min(maxW/W,maxH/H);
+  const cv=$('#preview'); cv.width=Math.round(W*scale); cv.height=Math.round(H*scale);
+  renderTo(cv.getContext('2d'),scale);
+  $('#paperwrap').hidden=false; $('#empty').hidden=true;
+  drawRegMarks();
+}
+function drawRegMarks(){
+  const marks=document.querySelectorAll('.reg');
+  const svg='<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="var(--reg)" stroke-width="1">'+
+    '<circle cx="13" cy="13" r="6"/><line x1="13" y1="0" x2="13" y2="26"/><line x1="0" y1="13" x2="26" y2="13"/></svg>';
+  marks.forEach(m=>m.innerHTML=svg);
+}
+
+/* ---------- helpers ---------- */
+function pageMM(){let[a,b]=PAGES[$('#size').value];return state.orient==='landscape'?[b,a]:[a,b];}
+function toast(msg,warn){const t=$('#toast');$('#toastMsg').textContent=msg;t.classList.toggle('warn',!!warn);t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2600);}
+function updateReadouts(){
+  $('#dpiOut').textContent=$('#dpi').value+' dpi';
+  $('#minOut').textContent=$('#minTile').value+' mm';
+  $('#tolOut').textContent=$('#tol').value;
+  $('#seedOut').textContent='#'+$('#seed').value;
+  const [mmW,mmH]=pageMM(),dpi=+$('#dpi').value;
+  const W=Math.round(mmW/25.4*dpi),H=Math.round(mmH/25.4*dpi);
+  $('#dims').textContent=`${W}×${H}px · ${mmW}×${mmH}mm · ${dpi}dpi`;
+  const ext=state.fmt; const base=$('#fname').value.replace(/\.(pdf|png)$/i,'');
+  $('#fname').value=base+'.'+ext;
+}
+function refresh(useSeed){
+  if(!images.length){layout=null;return;}
+  const seed=useSeed??+$('#seed').value;
+  layout=buildLayout(seed);
+  $('#scoreOut').textContent='score '+layout.score.toFixed(2);
+  drawPreview();
+  $('#export').disabled=false;
+}
+
+/* ---------- loading ---------- */
+async function addFiles(fileList){
+  const files=[...fileList].filter(f=>/^image\//.test(f.type)||/\.(jpe?g|png|webp)$/i.test(f.name));
+  if(!files.length){toast('No images found',true);return;}
+  setStatus('Decoding '+files.length+' images…',true);
+  const tol=$('#trim').checked?+$('#tol').value:0;
+  const loaded=[];
+  for(const f of files){
+    try{
+      const bmp=await createImageBitmap(f);
+      loaded.push({name:f.name,bitmap:bmp,nw:bmp.width,nh:bmp.height,trim:computeTrim(bmp,tol)});
+    }catch(e){/* skip unreadable */}
+  }
+  loaded.sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
+  images=loaded;
+  buildFilmstrip();
+  setStatus(images.length+' images loaded',false);
+  $('#best').click(); // start on the best fit
+}
+function buildFilmstrip(){
+  const strip=$('#filmstrip'); strip.innerHTML='';
+  if(!images.length)return;
+  const c=document.createElement('span');c.className='count';c.textContent=images.length+' imgs';strip.appendChild(c);
+  for(const im of images){
+    const cv=document.createElement('canvas');
+    const s=54/im.bitmap.height; cv.width=Math.max(1,Math.round(im.bitmap.width*s));cv.height=54;
+    cv.className='thumb'; cv.getContext('2d').drawImage(im.bitmap,0,0,cv.width,cv.height);
+    strip.appendChild(cv);
+  }
+}
+function setStatus(txt,live){$('#status').textContent=txt;$('#statusDot').classList.toggle('live',!!live);}
+
+async function pickFolder(){
+  if(!('showDirectoryPicker'in window)){
+    toast('Folder access needs Chrome/Edge — using file picker',true);
+    $('#fileInput').click();return;
+  }
+  try{
+    dirHandle=await window.showDirectoryPicker({mode:'readwrite',id:'collage',startIn:'pictures'});
+    const files=[];
+    for await(const entry of dirHandle.values()){
+      if(entry.kind==='file'&&/\.(jpe?g|png|webp)$/i.test(entry.name))files.push(await entry.getFile());
+    }
+    $('#saveNote').innerHTML='Writes into <b>'+dirHandle.name+'/</b> when you save.';
+    $('#export').textContent='Save to '+dirHandle.name+'/';
+    await addFiles(files);
+  }catch(e){if(e.name!=='AbortError')toast('Could not open folder',true);}
+}
+
+/* ---------- export ---------- */
+async function renderFull(){
+  const {W,H}=layout;
+  if(W*H>MAX_CANVAS_AREA)throw new Error('Page too large at this dpi for the browser canvas. Lower the dpi.');
+  let cv;
+  if('OffscreenCanvas'in window)cv=new OffscreenCanvas(W,H);
+  else{cv=document.createElement('canvas');cv.width=W;cv.height=H;}
+  renderTo(cv.getContext('2d'),1);
+  return cv;
+}
+async function canvasToBlob(cv,type,q){
+  if(cv.convertToBlob)return await cv.convertToBlob({type,quality:q});
+  return await new Promise(res=>cv.toBlob(res,type,q));
+}
+async function doExport(){
+  if(!layout)return;
+  const btn=$('#export');btn.disabled=true;const label=btn.textContent;btn.textContent='Rendering…';
+  try{
+    const cv=await renderFull();
+    let blob,name=$('#fname').value.trim()||('collage.'+state.fmt);
+    if(state.fmt==='png'){
+      blob=await canvasToBlob(cv,'image/png');
+      if(!/\.png$/i.test(name))name+='.png';
+    }else{
+      const jpg=await canvasToBlob(cv,'image/jpeg',0.92);
+      const bytes=new Uint8Array(await jpg.arrayBuffer());
+      const doc=await PDFLib.PDFDocument.create();
+      const [mmW,mmH]=pageMM();
+      const ptW=mmW/25.4*72, ptH=mmH/25.4*72;
+      const page=doc.addPage([ptW,ptH]);
+      const img=await doc.embedJpg(bytes);
+      page.drawImage(img,{x:0,y:0,width:ptW,height:ptH});
+      const out=await doc.save();
+      blob=new Blob([out],{type:'application/pdf'});
+      if(!/\.pdf$/i.test(name))name+='.pdf';
+    }
+    if(dirHandle){
+      const perm=await dirHandle.requestPermission({mode:'readwrite'});
+      if(perm!=='granted')throw new Error('Write permission denied');
+      const fh=await dirHandle.getFileHandle(name,{create:true});
+      const w=await fh.createWritable();await w.write(blob);await w.close();
+      toast('Saved '+name+' to '+dirHandle.name+'/');
+    }else{
+      const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+      toast('Downloaded '+name);
+    }
+  }catch(e){toast(e.message||'Export failed',true);}
+  finally{btn.disabled=false;btn.textContent=label;}
+}
+
+/* ---------- wiring ---------- */
+$('#pick').onclick=pickFolder;
+$('#pickFiles').onclick=()=>$('#fileInput2').click();
+$('#fileInput').onchange=e=>addFiles(e.target.files);
+$('#fileInput2').onchange=e=>addFiles(e.target.files);
+$('#clear').onclick=()=>{images=[];layout=null;dirHandle=null;buildFilmstrip();
+  $('#paperwrap').hidden=true;$('#empty').hidden=false;$('#export').disabled=true;
+  setStatus('No images loaded',false);$('#scoreOut').textContent='—';};
+
+$('#size').onchange=()=>{updateReadouts();refresh();};
+$('#orient').onclick=e=>{const b=e.target.closest('button');if(!b)return;
+  state.orient=b.dataset.v;[...e.currentTarget.children].forEach(x=>x.setAttribute('aria-pressed',x===b));
+  updateReadouts();refresh();};
+$('#fmt').onclick=e=>{const b=e.target.closest('button');if(!b)return;
+  state.fmt=b.dataset.v;[...e.currentTarget.children].forEach(x=>x.setAttribute('aria-pressed',x===b));
+  updateReadouts();};
+
+let t;
+const live=(fn)=>{clearTimeout(t);t=setTimeout(fn,90);};
+$('#dpi').oninput=()=>{updateReadouts();live(()=>refresh());};
+$('#minTile').oninput=()=>{updateReadouts();live(()=>refresh());};
+$('#seed').oninput=()=>{updateReadouts();live(()=>refresh(+$('#seed').value));};
+$('#tol').oninput=()=>{$('#tolOut').textContent=$('#tol').value;
+  live(()=>{if(images.length){retrimAll();refresh();}});};
+$('#trim').onchange=()=>{if(images.length){retrimAll();refresh();}};
+$('#fname').oninput=()=>{};
+
+$('#reroll').onclick=()=>{const s=Math.floor(Math.random()*4000);$('#seed').value=s;updateReadouts();refresh(s);};
+$('#best').onclick=()=>{if(!images.length)return;setStatus('Searching layouts…',true);
+  setTimeout(()=>{const b=findBest(4000);layout=b;$('#seed').value=b.seed;updateReadouts();
+    $('#scoreOut').textContent='score '+b.score.toFixed(2);drawPreview();
+    $('#export').disabled=false;setStatus(images.length+' images loaded',false);},10);};
+$('#export').onclick=doExport;
+
+window.addEventListener('resize',()=>{if(layout)drawPreview();});
+updateReadouts();
+</script>
+</body>
+</html>

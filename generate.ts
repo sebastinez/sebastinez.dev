@@ -19,6 +19,7 @@ async function main(): Promise<void> {
   const projectsHtml = renderProjectsPage(entries.projects);
   const feedXml = renderLinksFeed(entries.links);
   const css = await Deno.readTextFile("static/style.css");
+  const collage = await Deno.readTextFile("static/collage-studio.html");
 
   await Promise.all([
     Deno.writeTextFile("dist/index.html", linksHtml),
@@ -26,6 +27,7 @@ async function main(): Promise<void> {
     Deno.writeTextFile("dist/projects.html", projectsHtml),
     Deno.writeTextFile("dist/links.xml", feedXml),
     Deno.writeTextFile("dist/style.css", css),
+    Deno.writeTextFile("dist/collage-studio.html", collage),
   ]);
 
   console.log("Site generated into dist/");
