@@ -1,6 +1,7 @@
 {
   "imports": {
     "@std/yaml": "jsr:@std/yaml@^1",
+    "@std/fs": "jsr:@std/fs@^1",
     "@std/assert": "jsr:@std/assert@^1"
   },
   "tasks": {

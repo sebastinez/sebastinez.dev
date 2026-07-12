@@ -1,6 +1,7 @@
 import { parseEntries } from "./src/loader.ts";
 import { renderLinksPage, renderProjectsPage } from "./src/pages.ts";
 import { renderLinksFeed } from "./src/feed.ts";
+import { copy } from "@std/fs";
 
 const LOG_FILE = "build.log";
 
@@ -19,6 +20,8 @@ async function main(): Promise<void> {
   const projectsHtml = renderProjectsPage(entries.projects);
   const feedXml = renderLinksFeed(entries.links);
   const css = await Deno.readTextFile("static/style.css");
+
+  copy("projects", "dist/projects");
 
   await Promise.all([
     Deno.writeTextFile("dist/index.html", linksHtml),
