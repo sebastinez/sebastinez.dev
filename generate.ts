@@ -2,7 +2,7 @@ import { parseEntries } from "./src/loader.ts";
 import { renderLinksPage, renderProjectsPage } from "./src/pages.ts";
 import { renderLinksFeed } from "./src/feed.ts";
 import { copy } from "@std/fs";
-import { rmdir } from "node:fs/promises";
+import { rm } from "node:fs/promises";
 
 const LOG_FILE = "build.log";
 
@@ -15,7 +15,7 @@ async function main(): Promise<void> {
   const yamlText = await Deno.readTextFile("entries.yaml");
   const entries = parseEntries(yamlText);
 
-  await await rmdir("dist", { force: true });
+  await await rm("dist", { force: true, recursive: true });
   await Deno.mkdir("dist", { recursive: true });
 
   const linksHtml = renderLinksPage(entries.links);
