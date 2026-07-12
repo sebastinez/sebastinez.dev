@@ -9,10 +9,11 @@ links:
     date: 2026-07-02
 
 projects:
-  - name: tui-calender
+  - name: tcal
     description: A very minimalistic way to get event data from a .ics endpoint and render in the terminal.
     status: tinkering
     links: []
+    date_added: 2026-07-08
   - name: sebastinez.dev
     description: This site. A statically generated links/projects page built from a single YAML file.
     status: shipped
