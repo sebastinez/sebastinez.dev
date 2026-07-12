@@ -15,7 +15,7 @@ async function main(): Promise<void> {
   const yamlText = await Deno.readTextFile("entries.yaml");
   const entries = parseEntries(yamlText);
 
-  await await rmdir("dist", { force: true, recursive: true });
+  await await rmdir("dist", { force: true });
   await Deno.mkdir("dist", { recursive: true });
 
   const linksHtml = renderLinksPage(entries.links);
